@@ -7,7 +7,7 @@ export { default as withFacebook, FacebookButton } from './withFacebook';
 export { default as withGoogle, GoogleButton } from './withGoogle';
 
 export function withFederated(Comp) {
-    const Federated = withFacebook(withGoogle(Comp));
+    const Federated = withGoogle(withFacebook(Comp));
 
     return class extends Component {
         render() {

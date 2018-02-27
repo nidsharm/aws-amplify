@@ -10,12 +10,11 @@ const logger = new Logger('FederatedSignIn');
 export class FederatedButtons extends Component {
 
     facebook(facebook_app_id) {
-        console.log('FACEBOOK LOGIN FACEBOOK ID HMN', facebook_app_id);
         if (!facebook_app_id) {
             return null;
         }
-
         const { theme, onStateChange } = this.props;
+
         return React.createElement(FacebookButton, {
             facebook_app_id: facebook_app_id,
             theme: theme,
@@ -27,8 +26,8 @@ export class FederatedButtons extends Component {
         if (!google_android_client_id && !google_ios_client_id) {
             return null;
         }
-
         const { theme, onStateChange } = this.props;
+
         return React.createElement(GoogleButton, {
             google_android_client_id: google_android_client_id,
             google_ios_client_id: google_ios_client_id,
@@ -71,8 +70,8 @@ export default class FederatedSignIn extends Component {
         if (!['signIn', 'signedOut', 'signedUp'].includes(authState)) {
             return null;
         }
-        console.log('FACEBOOK /Google LOGIN FACEBOOK ID signin render');
         const theme = this.props.theme || AmplifyTheme;
+
         return React.createElement(
             FormSection,
             { theme: theme },

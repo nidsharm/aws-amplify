@@ -2,7 +2,6 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 import React, { Component } from 'react';
 import Expo from 'expo';
-import { button } from 'react-native';
 import { Auth, Logger } from 'aws-amplify';
 import AmplifyTheme from '../../AmplifyTheme';
 import { SignInButton } from '../../AmplifyUI';
@@ -28,15 +27,11 @@ export default function withFacebook(Comp) {
             } = await Expo.Facebook.logInWithReadPermissionsAsync(facebook_app_id, {
                 permissions: ["public_profile", "email"]
             });
-            logger.debug(`Facebook response: `, type);
-            logger.debug(`Facebook response token `, token);
+
             if (type === "success") {
                 const response = await fetch(`https://graph.facebook.com/me?access_token=${token}`);
-                console.log('RESPPONSE JSON IS', response);
-                alert(`Logged in! Hi ${(await response.json()).name}!`);
-                alert(`Token exp ${expires}!`);
-                const fedres = { response, token, expires };
-                this.federatedSignIn(fedres);
+                const federatedResponse = { response, token, expires };
+                this.federatedSignIn(federatedResponse);
             } else {
                 return;
             }
@@ -54,8 +49,7 @@ export default function withFacebook(Comp) {
             const user = {
                 name: response.name
             };
-            Auth.federatedSignIn('facebook', { token: accessToken, expiresIn }, user).then(crednetials => {
-                console.log('COG AUTH WITH FB GOVES', crednetials);
+            Auth.federatedSignIn('facebook', { token: accessToken, expiresIn }, user).then(credentials => {
                 if (onStateChange) {
                     onStateChange('signedIn');
                 }
@@ -72,7 +66,7 @@ const Button = props => React.createElement(SignInButton, {
     id: 'facebook_signin_btn',
     onPress: props.facebookSignIn,
     theme: props.theme || AmplifyTheme,
-    title: 'fb signin man'
+    title: 'Sign In with Facebook'
 });
 
 export const FacebookButton = withFacebook(Button);

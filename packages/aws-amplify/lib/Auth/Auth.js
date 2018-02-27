@@ -563,7 +563,6 @@ var AuthClass = (function () {
             return Cache_1.default.getItem('federatedInfo')
                 .then(function (federatedInfo) {
                 if (federatedInfo) {
-                    console.log('the federated thing came where it really shouldnt have you know:', federatedInfo);
                     var provider_1 = federatedInfo.provider, token_1 = federatedInfo.token, user_1 = federatedInfo.user;
                     return new Promise(function (resolve, reject) {
                         that_1.setCredentialsFromFederation(provider_1, token_1, user_1);
@@ -571,7 +570,6 @@ var AuthClass = (function () {
                     });
                 }
                 else {
-                    console.log('No user with fed found, going to catch here');
                     return that_1.currentSession()
                         .then(function (session) { return that_1.setCredentialsFromSession(session); })
                         .catch(function (error) { return that_1.setCredentialsForGuest(); });
@@ -755,16 +753,12 @@ var AuthClass = (function () {
      */
     AuthClass.prototype.currentUserInfo = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var credentials, source, user, attributes, userAttrs, info, err_1, user;
+            var source, user, attributes, userAttrs, info, err_1, user;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        credentials = this.credentials;
                         source = this.credentials_source;
-                        if (!source) {
-                            return [2 /*return*/, null];
-                        }
-                        if (!(source === 'aws' || source === 'userPool')) return [3 /*break*/, 5];
+                        if (!(!source || source === 'aws' || source === 'userPool')) return [3 /*break*/, 5];
                         return [4 /*yield*/, this.currentUserPoolUser()
                                 .catch(function (err) { return logger.debug(err); })];
                     case 1:
@@ -780,14 +774,13 @@ var AuthClass = (function () {
                         attributes = _a.sent();
                         userAttrs = this.attributesToObject(attributes);
                         info = {
-                            'id': credentials.identityId,
+                            'id': this.credentials.identityId,
                             'username': user.username,
                             'attributes': userAttrs
                         };
                         return [2 /*return*/, info];
                     case 4:
                         err_1 = _a.sent();
-                        console.warn(err_1);
                         logger.debug('currentUserInfo error', err_1);
                         return [2 /*return*/, {}];
                     case 5:
@@ -910,10 +903,8 @@ var AuthClass = (function () {
         if (mandatorySignIn) {
             this.credentials = null;
             this.credentials_source = 'no credentials';
-            console.log('hmm set creds is returning');
             return;
         }
-        console.log('hmm set creds is NOT returning');
         var credentials = new CognitoIdentityCredentials({
             IdentityPoolId: identityPoolId
         }, {
