@@ -1,10 +1,13 @@
 import React, { Component } from 'react';
-import Expo from 'expo';
+import * as FBSDK from 'react-native-fbsdk';
 import { Auth, Logger } from 'aws-amplify';
 import AmplifyTheme from '../../AmplifyTheme';
 import { SignInButton } from '../../AmplifyUI';
 
 const logger = new Logger('withFacebook');
+const {
+    LoginManager,
+  } = FBSDK;
 
 export default function withFacebook(Comp) {
     return class extends Component {
@@ -17,22 +20,37 @@ export default function withFacebook(Comp) {
         }
 
         async signIn() {
-            const { facebook_app_id } = this.props;
-            const {
-                type,
-                token,
-                expires
-              } = await Expo.Facebook.logInWithReadPermissionsAsync(facebook_app_id, {
-                permissions: ["public_profile", "email"]
-              });
+            LoginManager.logInWithReadPermissions(['public_profile']).then(
+                function(result) {
+                  if (result.isCancelled) {
+                    alert('Login was cancelled');
+                  } else {
+                    logger.debug('Facebook success with result ' + result);
+                    alert('Login was successful with permissions: '
+                      + result);
+                  }
+                },
+                function(error) {
+                  alert('Login failed with error: ' + error);
+                }
+              );
+
+            
+            // const {
+            //     type,
+            //     token,
+            //     expires
+            //   } = await Expo.Facebook.logInWithReadPermissionsAsync(facebook_app_id, {
+            //     permissions: ["public_profile", "email"]
+            //   });
               
-              if (type === "success") {
-                const response = await fetch(`https://graph.facebook.com/me?access_token=${token}`);
-                const federatedResponse = {response, token, expires};
-                this.federatedSignIn(federatedResponse);
-              } else {
-                  return;
-              }
+            //   if (type === "success") {
+            //     const response = await fetch(`https://graph.facebook.com/me?access_token=${token}`);
+            //     const federatedResponse = {response, token, expires};
+            //     this.federatedSignIn(federatedResponse);
+            //   } else {
+            //       return;
+            //   }
         }
 
         federatedSignIn(response) {
