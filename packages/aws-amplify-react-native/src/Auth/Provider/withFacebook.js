@@ -5,12 +5,15 @@ import AmplifyTheme from '../../AmplifyTheme';
 import { SignInButton } from '../../AmplifyUI';
 
 const logger = new Logger('withFacebook');
-const {
-    LoginManager,
-  } = FBSDK;
+
 
 export default function withFacebook(Comp) {
-    return class extends Component {
+    const {
+        LoginManager,
+        AccessToken
+      } = FBSDK;
+      
+    return class extends Component { 
         constructor(props) {
             super(props);
             this.signIn = this.signIn.bind(this);
@@ -20,14 +23,25 @@ export default function withFacebook(Comp) {
         }
 
         async signIn() {
+            const that = this;
             LoginManager.logInWithReadPermissions(['public_profile']).then(
                 function(result) {
                   if (result.isCancelled) {
                     alert('Login was cancelled');
                   } else {
-                    logger.debug('Facebook success with result ' + result);
-                    alert('Login was successful with permissions: '
-                      + result);
+                      logger.debug('sign in result chek FB' + JSON.stringify(result));
+                    AccessToken.getCurrentAccessToken().then(
+                      async (data) => {
+                          const access_token = data.accessToken;
+                          logger.debug('UMM FB TOKENN PROBABLY::' + data.accessToken.toString());
+                          const response = await fetch(`https://graph.facebook.com/me?access_token=${data.accessToken}`);
+                          logger.debug('UMM FB USER PROBABLY::' + JSON.stringify(response));
+                        
+                            const federatedResponse = {access_token, response};
+                            that.federatedSignIn(federatedResponse);
+                        });
+                        logger.debug('Facebook success with result ' + JSON.stringify(result));
+                        alert('Login was successful with result1: ', JSON.stringify(result));
                   }
                 },
                 function(error) {
@@ -35,37 +49,23 @@ export default function withFacebook(Comp) {
                 }
               );
 
-            
-            // const {
-            //     type,
-            //     token,
-            //     expires
-            //   } = await Expo.Facebook.logInWithReadPermissionsAsync(facebook_app_id, {
-            //     permissions: ["public_profile", "email"]
-            //   });
-              
-            //   if (type === "success") {
-            //     const response = await fetch(`https://graph.facebook.com/me?access_token=${token}`);
-            //     const federatedResponse = {response, token, expires};
-            //     this.federatedSignIn(federatedResponse);
-            //   } else {
-            //       return;
-            //   }
         }
 
         federatedSignIn(response) {
             logger.debug(response);
             const { onStateChange } = this.props;
-            const accessToken = response.token;
-            const expiresIn = response.expires;
-            
+            const accessToken = response.access_token;
+            const date = new Date();
+            const expires_at =  date.getTime() + 3600;
+             
             if (!accessToken) {
                 return;
             }
             const user = {
                 name: response.name
             }
-            Auth.federatedSignIn('facebook', { token: accessToken, expiresIn }, user)
+            logger.debug('UserNAME ' + response.name);
+            Auth.federatedSignIn('facebook', { token: accessToken, expires_at }, user)
                     .then(credentials => {
                         if (onStateChange) {
                             onStateChange('signedIn');

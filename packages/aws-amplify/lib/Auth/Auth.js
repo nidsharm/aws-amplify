@@ -59,7 +59,7 @@ var dispatchAuthEvent = function (event, data) {
 /**
 * Provide authentication steps
 */
-var AuthClass = (function () {
+var AuthClass = /** @class */ (function () {
     /**
      * Initialize Auth with AWS configurations
      * @param {Object} config - Configuration of the Auth
@@ -566,6 +566,7 @@ var AuthClass = (function () {
                     var provider_1 = federatedInfo.provider, token_1 = federatedInfo.token, user_1 = federatedInfo.user;
                     return new Promise(function (resolve, reject) {
                         that_1.setCredentialsFromFederation(provider_1, token_1, user_1);
+                        logger.debug('current creds is not failing');
                         resolve();
                     });
                 }
@@ -575,6 +576,7 @@ var AuthClass = (function () {
                         .catch(function (error) { return that_1.setCredentialsForGuest(); });
                 }
             }).catch(function (error) {
+                logger.debug('current creds is failing hmm');
                 return new Promise(function (resolve, reject) {
                     reject(error);
                 });
@@ -583,14 +585,17 @@ var AuthClass = (function () {
         else {
             // first to check whether there is federation info in the local storage
             var federatedInfo = Cache_1.default.getItem('federatedInfo');
+            logger.debug('in part 2 lol');
             if (federatedInfo) {
                 var provider_2 = federatedInfo.provider, token_2 = federatedInfo.token, user_2 = federatedInfo.user;
+                logger.debug('in part 3 lol');
                 return new Promise(function (resolve, reject) {
                     _this.setCredentialsFromFederation(provider_2, token_2, user_2);
                     resolve();
                 });
             }
             else {
+                logger.debug('in part 4 lol');
                 return this.currentSession()
                     .then(function (session) { return _this.setCredentialsFromSession(session); })
                     .catch(function (error) { return _this.setCredentialsForGuest(); });
@@ -842,30 +847,47 @@ var AuthClass = (function () {
         return obj;
     };
     AuthClass.prototype.setCredentialsFromFederation = function (provider, token, user) {
+        var _this = this;
+        Common_1.AWS.config.logger = console;
         var domains = {
             'google': 'accounts.google.com',
             'facebook': 'graph.facebook.com',
             'amazon': 'www.amazon.com'
         };
-        var domain = domains[provider];
+        var domain;
+        if (provider === 'amazon') {
+            domain = 'www.amazon.com';
+        }
+        else if (provider === 'google') {
+            domain = 'accounts.google.com';
+        }
+        else if (provider === 'facebook') {
+            domain = 'graph.facebook.com';
+        }
         if (!domain) {
             return Promise.reject(provider + ' is not supported: [google, facebook, amazon]');
         }
-        var logins = {};
-        logins[domain] = token;
+        var Logins = {};
+        Logins[domain] = token;
+        logger.debug('Logins map is:: ', JSON.stringify(Logins));
+        var abc = user.name;
         var _a = this._config, identityPoolId = _a.identityPoolId, region = _a.region;
-        this.credentials = new Common_1.AWS.CognitoIdentityCredentials({
-            IdentityPoolId: identityPoolId,
-            Logins: logins
-        }, {
-            region: region
+        var creds = new Common_1.AWS.CognitoIdentityCredentials({
+            Logins: Logins,
+            IdentityPoolId: identityPoolId
         });
-        this.credentials.authenticated = true;
-        this.credentials_source = 'federated';
-        this.user = Object.assign({ id: this.credentials.identityId }, user);
-        if (Common_1.AWS && Common_1.AWS.config) {
-            Common_1.AWS.config.credentials = this.credentials;
-        }
+        Common_1.AWS.config.update({
+            region: region,
+            credentials: creds
+        });
+        creds.getPromise().then(function () {
+            logger.debug('Cognito creds::', Common_1.AWS.config.credentials.accessKeyId);
+            logger.debug('');
+            _this.credentials.authenticated = true;
+            _this.credentials_source = 'federated';
+            _this.user = Object.assign({ id: _this.credentials.identityId }, user);
+            //if (AWS && AWS.config) { AWS.config.credentials = this.credentials; }
+        });
     };
     AuthClass.prototype.pickupCredentials = function () {
         var that = this;
@@ -938,6 +960,7 @@ var AuthClass = (function () {
         var ts = new Date().getTime();
         var delta = 10 * 60 * 1000; // 10 minutes
         var credentials = this.credentials;
+        logger.debug('WOAHH KEEP ALIVE CREDS', credentials);
         var expired = credentials.expired, expireTime = credentials.expireTime;
         if (!expired && expireTime > ts + delta) {
             return Promise.resolve(credentials);

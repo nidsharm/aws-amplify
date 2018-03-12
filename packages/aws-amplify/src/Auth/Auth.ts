@@ -22,6 +22,7 @@ import {
 } from '../Common';
 import Platform from '../Common/Platform';
 import Cache from '../Cache';
+import { Credentials } from 'aws-sdk/global';
 
 const logger = new Logger('AuthClass');
 
@@ -488,6 +489,7 @@ export default class AuthClass {
                         const { provider, token, user} = federatedInfo;
                         return new Promise((resolve, reject) => {
                             that.setCredentialsFromFederation(provider, token, user);
+                            logger.debug('current creds is not failing');
                             resolve();
                         });
                     } else {
@@ -496,6 +498,7 @@ export default class AuthClass {
                             .catch((error) => that.setCredentialsForGuest());
                     }
                 }).catch((error) => {
+                    logger.debug('current creds is failing hmm');
                     return new Promise((resolve, reject) => {
                         reject(error);
                     });
@@ -503,13 +506,16 @@ export default class AuthClass {
         } else {
             // first to check whether there is federation info in the local storage
             const federatedInfo = Cache.getItem('federatedInfo');
+            logger.debug('in part 2 lol');
             if (federatedInfo) {
                 const { provider, token, user} = federatedInfo;
+                logger.debug('in part 3 lol');
                 return new Promise((resolve, reject) => {
                     this.setCredentialsFromFederation(provider, token, user);
                     resolve();
                 });
             } else {
+                logger.debug('in part 4 lol');
                 return this.currentSession()
                     .then(session => this.setCredentialsFromSession(session))
                     .catch((error) => this.setCredentialsForGuest());
@@ -743,38 +749,54 @@ export default class AuthClass {
         return obj;
     }
 
-    private setCredentialsFromFederation(provider, token, user) {
+    private setCredentialsFromFederation(provider, token: string, user) {
+        AWS.config.logger = console;
+
         const domains = {
             'google': 'accounts.google.com',
             'facebook': 'graph.facebook.com',
             'amazon': 'www.amazon.com'
         };
+        let domain:string;
+        if(provider === 'amazon') {
+            domain = 'www.amazon.com';
+        } else if (provider === 'google') {
+            domain = 'accounts.google.com';
+        } else if(provider === 'facebook'){
+            domain = 'graph.facebook.com';
+        }
 
-        const domain = domains[provider];
         if (!domain) {
             return Promise.reject(provider + ' is not supported: [google, facebook, amazon]');
         }
 
-        const logins = {};
-        logins[domain] = token;
-
+        const Logins = {};
+        Logins[domain] = token;
+        logger.debug('Logins map is:: ', JSON.stringify(Logins));
+        const abc = user.name;
         const { identityPoolId, region } = this._config;
-        this.credentials = new AWS.CognitoIdentityCredentials(
-            {
-            IdentityPoolId: identityPoolId,
-            Logins: logins
-        },  {
-            region
+        const creds = new AWS.CognitoIdentityCredentials({
+            Logins,
+             IdentityPoolId: identityPoolId
+           });
+         AWS.config.update({
+            region,
+            credentials : creds
         });
-        this.credentials.authenticated = true;
-        this.credentials_source = 'federated';
-
-        this.user = Object.assign(
-            { id: this.credentials.identityId },
-            user
-        );
         
-        if (AWS && AWS.config) { AWS.config.credentials = this.credentials; }
+         creds.getPromise().then(() => {
+             logger.debug('Cognito creds::',AWS.config.credentials.accessKeyId); 
+            logger.debug('');
+            this.credentials.authenticated = true;
+            this.credentials_source = 'federated';
+    
+            this.user = Object.assign(
+                { id: this.credentials.identityId },
+                user
+            );
+            
+            // if (AWS && AWS.config) { AWS.config.credentials = this.credentials; }
+         });
     }
 
     private pickupCredentials() {
@@ -852,6 +874,7 @@ export default class AuthClass {
         const ts = new Date().getTime();
         const delta = 10 * 60 * 1000; // 10 minutes
         let credentials = this.credentials;
+        logger.debug('WOAHH KEEP ALIVE CREDS', credentials);
         const { expired, expireTime } = credentials;
         if (!expired && expireTime > ts + delta) {
             return Promise.resolve(credentials);

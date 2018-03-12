@@ -16,7 +16,7 @@ var react_native_1 = require("react-native");
 var iOS = require("./ios");
 var Android = require("./android");
 var OS = react_native_1.Platform.OS;
-var ClientDevice = (function () {
+var ClientDevice = /** @class */ (function () {
     function ClientDevice() {
     }
     ClientDevice.clientInfo = function () {

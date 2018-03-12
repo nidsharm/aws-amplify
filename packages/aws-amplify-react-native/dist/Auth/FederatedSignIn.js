@@ -9,28 +9,25 @@ const logger = new Logger('FederatedSignIn');
 
 export class FederatedButtons extends Component {
 
-    facebook(facebook_app_id) {
-        if (!facebook_app_id) {
-            return null;
-        }
+    facebook(facebook) {
+
         const { theme, onStateChange } = this.props;
 
         return React.createElement(FacebookButton, {
-            facebook_app_id: facebook_app_id,
             theme: theme,
             onStateChange: onStateChange
         });
     }
 
-    google(google_android_client_id, google_ios_client_id) {
-        if (!google_android_client_id && !google_ios_client_id) {
+    google(google_ios_client_id, google_web_client_id) {
+        if (!google_ios_client_id && !google_web_client_id) {
             return null;
         }
         const { theme, onStateChange } = this.props;
 
         return React.createElement(GoogleButton, {
-            google_android_client_id: google_android_client_id,
             google_ios_client_id: google_ios_client_id,
+            google_web_client_id: google_web_client_id,
             theme: theme,
             onStateChange: onStateChange
         });
@@ -47,14 +44,14 @@ export class FederatedButtons extends Component {
             return null;
         }
 
-        const { facebook_app_id, google_android_client_id, google_ios_client_id } = federated;
+        const { facebook, google_ios_client_id, google_web_client_id } = federated;
 
         const theme = this.props.theme || AmplifyTheme;
         return React.createElement(
             ActionRow,
             { theme: theme },
-            this.google(google_android_client_id, google_ios_client_id),
-            this.facebook(facebook_app_id)
+            this.google(google_ios_client_id, google_web_client_id),
+            this.facebook(facebook)
         );
     }
 }
@@ -64,7 +61,6 @@ export default class FederatedSignIn extends Component {
         const { federated, authState, onStateChange } = this.props;
         if (!federated) {
             logger.debug('federated prop is empty. show nothing');
-            logger.debug('federated={facebook_app_id: }');
             return null;
         }
         if (!['signIn', 'signedOut', 'signedUp'].includes(authState)) {

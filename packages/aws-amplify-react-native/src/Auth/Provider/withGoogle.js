@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import Expo from 'expo';
 import { Auth, Logger } from 'aws-amplify';
 import AmplifyTheme from '../../AmplifyTheme';
 import { SignInButton } from '../../AmplifyUI';
+import {GoogleSignin} from 'react-native-google-signin';
 
 const logger = new Logger('withGoogle');
 
@@ -16,36 +16,57 @@ export default function withGoogle(Comp) {
             this.state = {};
         }
 
-        async signIn() {
-            const {google_android_client_id, google_ios_client_id} = this.props;
+        componentDidMount() {
+            this.setupGoogleSignin();
+        }
+
+        async setupGoogleSignin() {
+            const { google_ios_client_id, google_web_client_id } = this.props;
             try {
-                const result = await Expo.Google.logInAsync({
-                    androidClientId: google_android_client_id,
-                    iosClientId: google_ios_client_id,
-                    scopes: ['profile', 'email'],
-                });
-      
-                if (result.type === 'success') {
-                    this.federatedSignIn(result);
-                } else {
-                    return {cancelled: true};
-                }
-            } catch(e) {
-              return e;
+              
+              await GoogleSignin.hasPlayServices({ autoResolve: true });
+              await GoogleSignin.configure({
+                webClientId:google_web_client_id,
+                iosClientId:google_ios_client_id
+              });
+              
+        
+              const user = await GoogleSignin.currentUserAsync();
+              logger.debug('Google current user in setup ' + JSON.stringify(user));
+              
             }
+            catch (err) {
+                logger.debug('Google signin ERROR ' + JSON.stringify(err));
+              console.log('Google signin errorss',err.code, err.message);
+            }
+          }
+
+        async signIn() {
+            GoogleSignin.signIn()
+                .then((response) => {
+                    logger.debug('GOOGLE SIGNIN DEETS ' + JSON.stringify(response));
+                    const username = response.givenName ;
+                    const email = response.email;
+                    const accessToken = response.idToken;
+                    const googleUser = {username,email, accessToken};
+                    this.federatedSignIn(googleUser);
+                })
+                .catch((err) => {
+                    console.log('WRONG SIGNIN', err);
+            })
+            .done();
           }
 
         federatedSignIn(googleUser) {
             const accessToken = googleUser.accessToken;
             const date = new Date();
             const expires_at = date.getTime() + 3600;
-            const profile = googleUser.user;
             const user = {
-                email: profile.email,
-                name: profile.name
+                email: googleUser.email,
+                name: googleUser.name
             };
             const { onStateChange } = this.props;
-            
+            logger.debug('Federated sugn google with ' + accessToken);
             return Auth.federatedSignIn('google', { token: accessToken, expires_at }, user)
                 .then(credentials => {
                     if (onStateChange) {

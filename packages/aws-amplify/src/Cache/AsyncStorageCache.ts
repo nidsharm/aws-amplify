@@ -121,6 +121,7 @@ class AsyncStorageCache extends StorageCache implements ICache {
     // try to add the item into cache
     try {
       await AsyncStorage.setItem(prefixedKey, JSON.stringify(item));
+      logger.debug(`Item we set here is ::${prefixedKey} and ${JSON.stringify(item)}`);
     } catch (setItemErr) {
       // if some error happened, we need to rollback the current size
       await this._decreaseCurSizeInBytes(item.byteSize);
@@ -309,7 +310,7 @@ class AsyncStorageCache extends StorageCache implements ICache {
    * @return {Promise} - return a promise resolves to be the value of the item
    */
   async getItem(key, options) {
-    console.log(`Get item: key is ${key} with options ${options}`);
+    logger.debug(`Get item: key is ${key} with options ${options}`);
     let ret = null;
     const prefixedKey = this.config.keyPrefix + key;
 
@@ -326,9 +327,12 @@ class AsyncStorageCache extends StorageCache implements ICache {
           await this._removeItem(prefixedKey, JSON.parse(ret).byteSize);
         } else {
           // if not expired, great, return the value and refresh it
+          logger.debug('1111');
           let item = JSON.parse(ret);
+          logger.debug('1112 '+ item);
           item = await this._refreshItem(item, prefixedKey);
-          return JSON.parse(item.data);
+          logger.debug('1113 '+ item);
+          return item.data;
         }
       }
 
@@ -341,7 +345,7 @@ class AsyncStorageCache extends StorageCache implements ICache {
       }
       return null;
     } catch (e) {
-      logger.warn(`getItem failed! ${e}`);
+      logger.warn(`getItem failed! ${e} for `);
       return null;
     }
   }
